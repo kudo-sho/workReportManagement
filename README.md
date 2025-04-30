@@ -12,52 +12,46 @@ Google Apps Script（GAS）を使用した作業報告書管理システムで�
 
 ### セットアップ手順
 
-1. Google Apps Scriptの設定
+1. リポジトリのクローン
+```bash
+git clone <リポジトリのURL>
+cd workReportManagement
+```
+
+2. 依存関係のインストール
+```bash
+npm install
+```
+
+3. Google Apps Scriptの設定
    - [Google Apps Script 設定画面](https://script.google.com/home/usersettings)にアクセス
    - 「Google Apps Script API」を有効にする
    - 「clasp」の使用を許可する
 
-2. claspのインストール
-```bash
-npm install -g @google/clasp
-```
-
-3. Googleアカウントでのログイン
+4. claspのログイン
 ```bash
 npx clasp login
 ```
 - ブラウザが開くので、Googleアカウントでログインし、必要な権限を付与してください。
 
-4. プロジェクトの初期化
-```bash
-mkdir -p src
-npm init -y
-```
+5. 新しいGoogle Apps Scriptプロジェクトの作成
+   - [Google Apps Script](https://script.google.com/)にアクセス
+   - 「新しいプロジェクト」をクリック
+   - スクリプトIDをコピー
 
-5. 依存関係のインストール
-```bash
-npm install @google/clasp --save-dev
-```
-
-6. プロジェクトの設定
-- `.clasp.json`ファイルを作成し、以下の内容を設定：
-```json
-{
-  "scriptId": "YOUR_SCRIPT_ID",
-  "rootDir": "src"
-}
-```
-
-7. プロジェクトのプル
-```bash
-npx clasp pull
-```
+6. `.clasp.json`のスクリプトIDを更新
+- コピーしたスクリプトIDを`.clasp.json`の`scriptId`に設定してください
 
 ### 開発コマンド
 
 - ローカルの変更をGASにアップロード
 ```bash
 npm run push
+```
+
+- ローカルの変更を自動的にGASにアップロード（開発時推奨）
+```bash
+npx clasp push --watch
 ```
 
 - GASの変更をローカルにダウンロード
