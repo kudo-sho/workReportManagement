@@ -1,6 +1,10 @@
 // スプレッドシート初期化
 function setupInitialLayout() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('稼働一覧表');
+  if (!sheet) {
+    console.error('「稼働一覧表」シートが見つかりません。');
+    return;
+  }
   sheet.clear(); // まずすべてクリア
 
   // ヘッダー行を作成

@@ -9,7 +9,11 @@ function importWorkingDaysForReport() {
   const calendarId = config.calendarId;
   const WORKING_START_DATE = config.workingStartDate;
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('稼働一覧表');
+  if (!sheet) {
+    console.error('「稼働一覧表」シートが見つかりません。');
+    return;
+  }
   const calendar = CalendarApp.getCalendarById(calendarId);
   const lastRow = sheet.getLastRow();
 
