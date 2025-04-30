@@ -6,24 +6,34 @@ function setupInitialLayout() {
   // ヘッダー行を作成
   sheet.appendRow(['日付', '稼働時間（h）', '業務内容', 'ステータス', 'イベントID（管理用）']);
 
-  // ヘッダーにスタイル設定
+  // 空の表を作成（20行分）
+  const emptyRows = Array(20).fill(['', '', '', '', '']);
+  sheet.getRange(2, 1, 20, 5).setValues(emptyRows);
+
+  // 列の配置を設定
+  sheet.getRange('A:B').setHorizontalAlignment('center'); // 日付と稼働時間は中央揃え
+  sheet.getRange('C:C').setHorizontalAlignment('left');   // 業務内容は左揃え
+  sheet.getRange('D:E').setHorizontalAlignment('center'); // ステータスとイベントIDは中央揃え
+  sheet.getRange('A:E').setVerticalAlignment('middle');   // すべての列を垂直方向中央揃え
+
+  // ヘッダー行のスタイル設定
   const headerRange = sheet.getRange(1, 1, 1, 5);
   headerRange.setFontWeight('bold');
   headerRange.setBackground('#d9ead3'); // 明るい緑
-
-  // 日付列（A列）を日付フォーマットに
-  sheet.getRange(2, 1, sheet.getMaxRows() - 1).setNumberFormat('yyyy/MM/dd');
-
-  // 稼働時間列（B列）を小数1桁に
-  sheet.getRange(2, 2, sheet.getMaxRows() - 1).setNumberFormat('0.0');
-
-  // 業務内容列（C列）はそのまま
-
-  // ステータス列（D列）はそのまま
+  headerRange.setHorizontalAlignment('center'); // ヘッダーは中央揃え
 
   // イベントID列（E列）を「非表示」にする
   sheet.hideColumn(sheet.getRange(1, 5));
+
+  // 列幅を設定
+  sheet.setColumnWidth(1, 100);  // 日付
+  sheet.setColumnWidth(2, 100);  // 稼働時間
+  sheet.setColumnWidth(3, 400);  // 業務内容を広めに
+  sheet.setColumnWidth(4, 100);  // ステータス
+
+  // ヘッダー行を固定
+  sheet.setFrozenRows(1);
+
+  // 業務内容列の文字列を折り返す設定
+  sheet.getRange('C:C').setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
 }
-
-
-
