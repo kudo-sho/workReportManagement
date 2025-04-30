@@ -1,0 +1,14 @@
+{
+  "name": "work-report-management",
+  "version": "1.0.0",
+  "description": "作業報告書管理システム",
+  "scripts": {
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "open": "clasp open",
+    "deploy": "clasp deploy"
+  },
+  "dependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+} 
