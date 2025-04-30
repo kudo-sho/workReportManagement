@@ -1,29 +1,9 @@
-// 環境変数の設定を取得する関数
-function getConfig() {
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const calendarId = scriptProperties.getProperty('CALENDAR_ID');
-  const workingStartDate = scriptProperties.getProperty('WORKING_START_DATE');
-  
-  const missingConfigs = [];
-  if (!calendarId) missingConfigs.push('カレンダーID');
-  if (!workingStartDate) missingConfigs.push('稼働開始日');
-  
-  if (missingConfigs.length > 0) {
-    const errorMessage = `以下の設定が行われていません：\n${missingConfigs.join('\n')}\n\n「環境設定」から設定を行ってください。`;
-    console.error(errorMessage);
-    return null;
-  }
-  
-  return {
-    calendarId: calendarId,
-    workingStartDate: new Date(workingStartDate)
-  };
-}
-
+// ユーティリティ関数のインクルード
+//#include "utils/configUtils.gs"
 
 function importWorkingDaysForReport() {
   // 環境設定値を取得
-  const config = getConfig();
+  const config = getConfigFromProperties();
   if (!config) return; // 設定が不足している場合は処理を中断
   
   const calendarId = config.calendarId;
