@@ -71,7 +71,6 @@ function importWorkingDaysForReport() {
     const durationMs = endTimeEvent - startTime;
     const durationHours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
     const description = event.getDescription() || '';
-    const status = '未処理'; // デフォルトのステータス
 
     // 日付（開始日のみ）
     const dateOnly = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
@@ -94,7 +93,7 @@ function importWorkingDaysForReport() {
         dateOnly,
         durationHours,
         description,
-        status,
+        '', // ステータスは空欄
         eventId
       ]);
     }
