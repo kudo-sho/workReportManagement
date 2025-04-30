@@ -1,13 +1,13 @@
 // スプレッドシート初期化
-function setupInitialLayout_v2() {
+function setupInitialLayout() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   sheet.clear(); // まずすべてクリア
 
   // ヘッダー行を作成
-  sheet.appendRow(['日付', '稼働時間（h）', '業務内容', 'イベントID（管理用）']);
+  sheet.appendRow(['日付', '稼働時間（h）', '業務内容', 'ステータス', 'イベントID（管理用）']);
 
   // ヘッダーにスタイル設定
-  const headerRange = sheet.getRange(1, 1, 1, 4);
+  const headerRange = sheet.getRange(1, 1, 1, 5);
   headerRange.setFontWeight('bold');
   headerRange.setBackground('#d9ead3'); // 明るい緑
 
@@ -19,8 +19,10 @@ function setupInitialLayout_v2() {
 
   // 業務内容列（C列）はそのまま
 
-  // イベントID列（D列）を「非表示」にする
-  sheet.hideColumn(sheet.getRange(1, 4));
+  // ステータス列（D列）はそのまま
+
+  // イベントID列（E列）を「非表示」にする
+  sheet.hideColumn(sheet.getRange(1, 5));
 }
 
 

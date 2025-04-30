@@ -36,15 +36,16 @@ function importWorkingDaysForReport() {
   // === 既存データをマップに読み込む（イベントIDをキーにする）===
   const existingData = {};
   if (lastRow > 1) {
-    const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues(); // 2行目から4列分（A〜D列）を取得
+    const values = sheet.getRange(2, 1, lastRow - 1, 5).getValues(); // 2行目から5列分（A〜E列）を取得
     values.forEach((row, index) => {
       const date = row[0];
-      const eventId = row[3];
+      const eventId = row[4];
       if (eventId) {
         existingData[eventId] = {
           date: date,
           durationHours: row[1],
           description: row[2],
+          status: row[3],
           rowNumber: index + 2
         };
       }
@@ -70,6 +71,7 @@ function importWorkingDaysForReport() {
     const durationMs = endTimeEvent - startTime;
     const durationHours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
     const description = event.getDescription() || '';
+    const status = '未処理'; // デフォルトのステータス
 
     // 日付（開始日のみ）
     const dateOnly = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
@@ -82,8 +84,8 @@ function importWorkingDaysForReport() {
       if (existing.date.getTime() !== dateOnly.getTime() ||
           existing.durationHours !== durationHours ||
           existing.description !== description) {
-        sheet.getRange(existing.rowNumber, 1, 1, 4).setValues([
-          [dateOnly, durationHours, description, eventId]
+        sheet.getRange(existing.rowNumber, 1, 1, 5).setValues([
+          [dateOnly, durationHours, description, existing.status, eventId]
         ]);
       }
     } else {
@@ -92,6 +94,7 @@ function importWorkingDaysForReport() {
         dateOnly,
         durationHours,
         description,
+        status,
         eventId
       ]);
     }
@@ -112,6 +115,6 @@ function importWorkingDaysForReport() {
   // === 最後に、日付順（昇順）に並べ替え ===
   const newLastRow = sheet.getLastRow();
   if (newLastRow > 1) {
-    sheet.getRange(2, 1, newLastRow - 1, 4).sort({column: 1, ascending: true});
+    sheet.getRange(2, 1, newLastRow - 1, 5).sort({column: 1, ascending: true});
   }
 }
