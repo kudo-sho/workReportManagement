@@ -52,19 +52,19 @@ function setupMonthlySummaryLayout() {
   sheet.clear(); // まずすべてクリア
 
   // ヘッダー行を作成
-  sheet.appendRow(['月', '合計稼働時間（h）', '完了タスク', '未完了及び進行中のタスク', '備考']);
+  sheet.appendRow(['月', '合計稼働時間（h）', '完了タスク', '未完了及び進行中のタスク', '備考', 'ステータス']);
 
   // 空の表を作成（12行分）
-  const emptyRows = Array(12).fill(['', '', '', '', '']);
-  sheet.getRange(2, 1, 12, 5).setValues(emptyRows);
+  const emptyRows = Array(12).fill(['', '', '', '', '', '']);
+  sheet.getRange(2, 1, 12, 6).setValues(emptyRows);
 
   // 列の配置を設定
   sheet.getRange('A:B').setHorizontalAlignment('center'); // 月と稼働時間は中央揃え
-  sheet.getRange('C:E').setHorizontalAlignment('left');   // その他の列は左揃え
-  sheet.getRange('A:E').setVerticalAlignment('middle');   // すべての列を垂直方向中央揃え
+  sheet.getRange('C:F').setHorizontalAlignment('left');   // その他の列は左揃え
+  sheet.getRange('A:F').setVerticalAlignment('middle');   // すべての列を垂直方向中央揃え
 
   // ヘッダー行のスタイル設定
-  const headerRange = sheet.getRange(1, 1, 1, 5);
+  const headerRange = sheet.getRange(1, 1, 1, 6);
   headerRange.setFontWeight('bold');
   headerRange.setBackground('#d9ead3'); // 明るい緑
   headerRange.setHorizontalAlignment('center'); // ヘッダーは中央揃え
@@ -75,6 +75,7 @@ function setupMonthlySummaryLayout() {
   sheet.setColumnWidth(3, 300);  // 完了タスク
   sheet.setColumnWidth(4, 300);  // 未完了及び進行中のタスク
   sheet.setColumnWidth(5, 300);  // 備考
+  sheet.setColumnWidth(6, 100);  // ステータス
 
   // ヘッダー行を固定
   sheet.setFrozenRows(1);
