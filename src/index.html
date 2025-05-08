@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <title>稼働承認フォーム</title>
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+      input, textarea, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      textarea {
+        height: 100px;
+        resize: vertical;
+      }
+      button {
+        background-color: #1976d2;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background-color: #1565c0;
+      }
+      .approvals-list {
+        margin-top: 30px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f5f5f5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>稼働承認フォーム</h1>
+    <form id="form" onsubmit="event.preventDefault(); submitForm({
+      email: document.getElementById('email').value,
+      name: document.getElementById('name').value,
+      targetMonth: document.getElementById('targetMonth').value,
+      approvalStatus: document.getElementById('approvalStatus').value,
+      comment: document.getElementById('comment').value
+    });">
+      <div class="form-group">
+        <label for="email">メールアドレス:</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="form-group">
+        <label for="name">氏名:</label>
+        <input type="text" id="name" required>
+      </div>
+      <div class="form-group">
+        <label for="targetMonth">対象月:</label>
+        <input type="month" id="targetMonth" required>
+      </div>
+      <div class="form-group">
+        <label for="approvalStatus">承認可否:</label>
+        <select id="approvalStatus" required>
+          <option value="承認">承認</option>
+          <option value="否認">否認</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="comment">コメント:</label>
+        <textarea id="comment" required></textarea>
+      </div>
+      <button type="submit">送信</button>
+    </form>
+
+    <div class="approvals-list">
+      <h2>稼働承認一覧</h2>
+      <div id="approvalsTable"></div>
+    </div>
+
+    <script>
+      function submitForm(formData) {
+        google.script.run
+          .withSuccessHandler(function(response) {
+            if (response.success) {
+              alert('稼働承認が送信されました');
+              document.getElementById('form').reset();
+              loadApprovals(); // 一覧を更新
+            } else {
+              alert('エラーが発生しました: ' + response.error);
+            }
+          })
+          .withFailureHandler(function(error) {
+            alert('エラーが発生しました: ' + error);
+          })
+          .submitWorkApproval(formData);
+      }
+
+      function loadApprovals() {
+        google.script.run
+          .withSuccessHandler(function(approvals) {
+            const table = document.getElementById('approvalsTable');
+            if (approvals.length === 0) {
+              table.innerHTML = '<p>データがありません</p>';
+              return;
+            }
+
+            let html = '<table><thead><tr>';
+            // ヘッダー行を作成
+            Object.keys(approvals[0]).forEach(key => {
+              html += `<th>${key}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // データ行を作成
+            approvals.forEach(approval => {
+              html += '<tr>';
+              Object.entries(approval).forEach(([key, value]) => {
+                // 承認可否の場合は色分け
+                if (key === '承認可否') {
+                  const color = value === '承認' ? '#4caf50' : '#f44336';
+                  html += `<td style="color: ${color}; font-weight: bold;">${value}</td>`;
+                } else {
+                  html += `<td>${value || ''}</td>`;
+                }
+              });
+              html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            table.innerHTML = html;
+          })
+          .withFailureHandler(function(error) {
+            alert('エラーが発生しました: ' + error);
+          })
+          .getWorkApprovals();
+      }
+
+      // ページ読み込み時に承認一覧を取得
+      window.onload = loadApprovals;
+    </script>
+  </body>
+</html> 
