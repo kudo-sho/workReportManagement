@@ -120,25 +120,25 @@
 
       function loadApprovals() {
         google.script.run
-          .withSuccessHandler(function(approvals) {
+          .withSuccessHandler(function(result) {
+            const headers = result.headers;
+            const approvals = result.approvals;
             const table = document.getElementById('approvalsTable');
-            if (approvals.length === 0) {
+            if (!headers || headers.length === 0 || !approvals || approvals.length === 0) {
               table.innerHTML = '<p>データがありません</p>';
               return;
             }
 
             let html = '<table><thead><tr>';
-            // ヘッダー行を作成
-            Object.keys(approvals[0]).forEach(key => {
+            headers.forEach(key => {
               html += `<th>${key}</th>`;
             });
             html += '</tr></thead><tbody>';
 
-            // データ行を作成
             approvals.forEach(approval => {
               html += '<tr>';
-              Object.entries(approval).forEach(([key, value]) => {
-                // 承認可否の場合は色分け
+              headers.forEach(key => {
+                const value = approval[key];
                 if (key === '承認可否') {
                   const color = value === '承認' ? '#4caf50' : '#f44336';
                   html += `<td style="color: ${color}; font-weight: bold;">${value}</td>`;

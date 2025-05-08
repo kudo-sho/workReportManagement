@@ -62,18 +62,14 @@ function getWorkApprovals() {
     const sheet = getSheet();
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    // データを新しい順に並べ替え
-    const approvals = data.slice(1).reverse().map(row => {
+    const approvals = data.slice(1).map(row => {
       const approval = {};
       headers.forEach((header, index) => {
         let value = row[index];
-        // タイムスタンプのフォーマット
         if (header === 'タイムスタンプ' && value instanceof Date) {
           value = Utilities.formatDate(value, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
         }
-        // 対象月のフォーマット
         if (header === '対象月' && value) {
-          // 日付型の場合は年月のみ抽出
           if (value instanceof Date) {
             value = Utilities.formatDate(value, 'Asia/Tokyo', 'yyyy-MM');
           } else if (/^\d{4}-\d{2}/.test(value)) {
@@ -84,9 +80,9 @@ function getWorkApprovals() {
       });
       return approval;
     });
-    return approvals;
+    return { headers, approvals };
   } catch (error) {
     console.error('Error fetching work approvals:', error);
-    return [];
+    return { headers: [], approvals: [] };
   }
 } 
