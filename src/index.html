@@ -101,6 +101,20 @@
     </div>
 
     <script>
+      // ユーザー情報を自動入力
+      function initializeForm() {
+        google.script.run
+          .withSuccessHandler(function(userInfo) {
+            if (userInfo) {
+              document.getElementById('email').value = userInfo.email;
+              document.getElementById('name').value = userInfo.name;
+              document.getElementById('email').readOnly = true;
+              document.getElementById('name').readOnly = true;
+            }
+          })
+          .getUserInfo();
+      }
+
       function submitForm(formData) {
         google.script.run
           .withSuccessHandler(function(response) {
@@ -158,8 +172,11 @@
           .getWorkApprovals();
       }
 
-      // ページ読み込み時に承認一覧を取得
-      window.onload = loadApprovals;
+      // ページ読み込み時に承認一覧を取得し、フォームを初期化
+      window.onload = function() {
+        loadApprovals();
+        initializeForm();
+      };
     </script>
   </body>
 </html> 

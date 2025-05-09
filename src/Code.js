@@ -1,10 +1,9 @@
 // スプレッドシートの設定
-const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const SHEET_NAME = '稼働承認';
 
 // スプレッドシートを取得
 function getSheet() {
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
   
   // シートが存在しない場合は作成
@@ -22,6 +21,15 @@ function getSheet() {
   }
   
   return sheet;
+}
+
+// ユーザー情報を取得
+function getUserInfo() {
+  const user = Session.getActiveUser();
+  return {
+    email: user.getEmail(),
+    name: user.getUsername()
+  };
 }
 
 // Webアプリケーションのエントリーポイント

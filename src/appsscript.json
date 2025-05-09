@@ -5,7 +5,13 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "webapp": {
-    "access": "DOMAIN",
+    "access": "ANYONE",
     "executeAs": "USER_ACCESSING"
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/spreadsheets.currentonly"
+  ]
 }
