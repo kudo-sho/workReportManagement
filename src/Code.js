@@ -93,4 +93,54 @@ function getWorkApprovals() {
     console.error('Error fetching work approvals:', error);
     return { headers: [], approvals: [] };
   }
+}
+
+// 未承認の月を取得
+function getUnapprovedMonths() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const summarySheet = ss.getSheetByName('月次稼働集計表');
+    
+    if (!summarySheet) {
+      console.log('月次稼働集計表が見つかりません');
+      return [];
+    }
+
+    const lastRow = summarySheet.getLastRow();
+    console.log('最終行:', lastRow);
+    if (lastRow <= 1) {
+      console.log('データが存在しません');
+      return [];
+    }
+
+    // 月とステータスの列を取得
+    const data = summarySheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    console.log('取得したデータ:', data);
+    
+    // 未承認の月をフィルタリング
+    const unapprovedMonths = data
+      .filter(row => {
+        console.log('ステータス確認:', row[5]);
+        return row[5] !== '承認済';
+      })
+      .map(row => {
+        let month = row[0];
+        // Date型ならYYYY/MMに変換
+        if (month instanceof Date) {
+          month = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy/MM');
+        }
+        console.log('処理中の月:', month);
+        const [year, monthNum] = month.split('/');
+        return {
+          value: `${year}-${monthNum}`,
+          label: `${year}年${monthNum}月`
+        };
+      });
+
+    console.log('未承認の月:', unapprovedMonths);
+    return unapprovedMonths;
+  } catch (error) {
+    console.error('Error fetching unapproved months:', error);
+    return [];
+  }
 } 

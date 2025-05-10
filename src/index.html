@@ -79,7 +79,9 @@
       </div>
       <div class="form-group">
         <label for="targetMonth">対象月:</label>
-        <input type="month" id="targetMonth" required>
+        <select id="targetMonth" required>
+          <option value="">選択してください</option>
+        </select>
       </div>
       <div class="form-group">
         <label for="approvalStatus">承認可否:</label>
@@ -103,6 +105,22 @@
     <script>
       // ユーザー情報を自動入力
       function initializeForm() {
+        // 未承認の月を取得してセレクトボックスに設定
+        google.script.run
+          .withSuccessHandler(function(months) {
+            const select = document.getElementById('targetMonth');
+            months.forEach(month => {
+              const option = document.createElement('option');
+              option.value = month.value;
+              option.textContent = month.label;
+              select.appendChild(option);
+            });
+          })
+          .withFailureHandler(function(error) {
+            console.log('未承認の月の取得に失敗しました:', error);
+          })
+          .getUnapprovedMonths();
+
         google.script.run
           .withSuccessHandler(function(userInfo) {
             if (userInfo) {
