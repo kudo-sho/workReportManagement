@@ -57,6 +57,30 @@ function submitWorkApproval(formData) {
       formData.approvalStatus,
       formData.comment
     ]);
+
+    // 月次稼働集計表のステータスを「承認済」に更新
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const summarySheet = ss.getSheetByName('月次稼働集計表');
+    if (summarySheet) {
+      const lastRow = summarySheet.getLastRow();
+      if (lastRow > 1) {
+        const data = summarySheet.getRange(2, 1, lastRow - 1, 1).getValues(); // 月列のみ取得
+        for (let i = 0; i < data.length; i++) {
+          let month = data[i][0];
+          let ym = '';
+          if (month instanceof Date) {
+            ym = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy-MM');
+          } else if (typeof month === 'string' && month.match(/^\d{4}[\/\-]\d{2}$/)) {
+            ym = month.replace('/', '-');
+          }
+          if (ym === formData.targetMonth) {
+            summarySheet.getRange(i + 2, 6).setValue('承認済'); // 6列目がステータス
+            break;
+          }
+        }
+      }
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Error submitting work approval:', error);
