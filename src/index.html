@@ -108,9 +108,10 @@
             if (userInfo) {
               document.getElementById('email').value = userInfo.email;
               document.getElementById('name').value = userInfo.name;
-              document.getElementById('email').readOnly = true;
-              document.getElementById('name').readOnly = true;
             }
+          })
+          .withFailureHandler(function(error) {
+            console.log('ユーザー情報の取得に失敗しました:', error);
           })
           .getUserInfo();
       }
