@@ -109,12 +109,27 @@
         google.script.run
           .withSuccessHandler(function(months) {
             const select = document.getElementById('targetMonth');
+            // 先月の値を計算
+            const today = new Date();
+            const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const prevYear = prevMonth.getFullYear();
+            const prevMonthNum = String(prevMonth.getMonth() + 1).padStart(2, '0');
+            const prevValue = `${prevYear}-${prevMonthNum}`;
+            let found = false;
             months.forEach(month => {
               const option = document.createElement('option');
               option.value = month.value;
               option.textContent = month.label;
+              if (month.value === prevValue) {
+                option.selected = true;
+                found = true;
+              }
               select.appendChild(option);
             });
+            // もし先月がなければ最初の選択肢を選択
+            if (!found && months.length > 0) {
+              select.options[1].selected = true;
+            }
           })
           .withFailureHandler(function(error) {
             console.log('未承認の月の取得に失敗しました:', error);
