@@ -70,21 +70,21 @@
       comment: document.getElementById('comment').value
     });">
       <div class="form-group">
-        <label for="email">メールアドレス:</label>
+        <label for="email">メールアドレス <span style="color: red;">（必須）</span>:</label>
         <input type="email" id="email" required>
       </div>
       <div class="form-group">
-        <label for="name">氏名:</label>
+        <label for="name">氏名 <span style="color: red;">（必須）</span>:</label>
         <input type="text" id="name" required>
       </div>
       <div class="form-group">
-        <label for="targetMonth">対象月:</label>
+        <label for="targetMonth">対象月 <span style="color: red;">（必須）</span>:</label>
         <select id="targetMonth" required>
           <option value="">選択してください</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="approvalStatus">承認可否:</label>
+        <label for="approvalStatus">承認可否 <span style="color: red;">（必須）</span>:</label>
         <select id="approvalStatus" required>
           <option value="承認">承認</option>
           <option value="否認">否認</option>
