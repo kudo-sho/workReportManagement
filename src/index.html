@@ -83,6 +83,7 @@
           <option value="">選択してください</option>
         </select>
       </div>
+      <div id="workDetailsTable"></div>
       <div class="form-group">
         <label for="approvalStatus">承認可否 <span style="color: red;">（必須）</span>:</label>
         <select id="approvalStatus" required>
@@ -116,6 +117,8 @@
             const prevMonthNum = String(prevMonth.getMonth() + 1).padStart(2, '0');
             const prevValue = `${prevYear}-${prevMonthNum}`;
             let found = false;
+            // 既存のオプションをクリア
+            select.innerHTML = '<option value="">選択してください</option>';
             months.forEach(month => {
               const option = document.createElement('option');
               option.value = month.value;
@@ -130,6 +133,8 @@
             if (!found && months.length > 0) {
               select.options[1].selected = true;
             }
+            // 初期表示時にもchangeイベントを発火
+            select.dispatchEvent(new Event('change'));
           })
           .withFailureHandler(function(error) {
             console.log('未承認の月の取得に失敗しました:', error);
@@ -210,6 +215,37 @@
       window.onload = function() {
         loadApprovals();
         initializeForm();
+
+        // 対象月選択時に稼働内容を表示
+        document.getElementById('targetMonth').addEventListener('change', function() {
+          const month = this.value;
+          console.log('選択された月:', month); // デバッグ用
+          const tableDiv = document.getElementById('workDetailsTable');
+          tableDiv.innerHTML = '';
+          if (!month) return; // 空やnullなら何もしない
+          google.script.run.withSuccessHandler(function(details) {
+            console.log('取得した稼働内容:', details); // デバッグ用
+            if (!details || details.length === 0) {
+              tableDiv.innerHTML = '<p>該当月の稼働内容はありません。</p>';
+              return;
+            }
+            // テーブル生成
+            let html = '<table><thead><tr>';
+            Object.keys(details[0]).forEach(key => {
+              html += `<th>${key}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            details.forEach(row => {
+              html += '<tr>';
+              Object.values(row).forEach(val => {
+                html += `<td>${val !== undefined ? val : ''}</td>`;
+              });
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            tableDiv.innerHTML = html;
+          }).getWorkDetailsByMonth(month);
+        });
       };
     </script>
   </body>
