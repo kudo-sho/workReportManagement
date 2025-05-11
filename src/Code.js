@@ -141,11 +141,23 @@ function getUnapprovedMonths() {
     const data = summarySheet.getRange(2, 1, lastRow - 1, 6).getValues();
     console.log('取得したデータ:', data);
     
-    // 未承認の月をフィルタリング
+    // 当月（今日の年月）を取得
+    const today = new Date();
+    const thisMonth = Utilities.formatDate(today, 'Asia/Tokyo', 'yyyy-MM');
+
+    // 未承認の月をフィルタリング（当月も除外）
     const unapprovedMonths = data
       .filter(row => {
         console.log('ステータス確認:', row[5]);
-        return row[5] !== '承認済';
+        let month = row[0];
+        let ym = '';
+        if (month instanceof Date) {
+          ym = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy-MM');
+        } else if (typeof month === 'string') {
+          ym = month.replace('/', '-');
+        }
+        // ステータスが承認済でなく、かつ当月でない
+        return row[5] !== '承認済' && ym !== thisMonth;
       })
       .map(row => {
         let month = row[0];
