@@ -120,6 +120,12 @@
       .remarks-table-content {
         white-space: pre-wrap;
       }
+      .loading-message {
+        color: red;
+        font-weight: bold;
+        font-size: 16px;
+        margin: 10px 0;
+      }
     </style>
   </head>
   <body>
@@ -278,60 +284,92 @@
         loadApprovals();
         initializeForm();
 
-        // 対象月選択時に稼働内容を表示
+        // 対象月選択時に稼働内容・要約・備考を並列取得し、両方揃ったら描画
         document.getElementById('targetMonth').addEventListener('change', function() {
           const month = this.value;
-          console.log('選択された月:', month); // デバッグ用
           const tableDiv = document.getElementById('workDetailsTable');
-          tableDiv.innerHTML = '';
-          if (!month) return; // 空やnullなら何もしない
-          google.script.run.withSuccessHandler(function(details) {
-            console.log('取得した稼働内容:', details); // デバッグ用
-            if (!details || details.length === 0) {
-              tableDiv.innerHTML = '<p>該当月の稼働内容はありません。</p>';
-              // 要約テーブルのみ表示するため、下の要約取得処理はこのまま
-            }
-            // テーブル生成
-            let html = '<table><thead><tr>';
-            const columns = ['日付', '稼働時間（h）', '業務内容'];
-            columns.forEach(key => {
-              html += `<th>${key}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            details.forEach(row => {
-              html += '<tr>';
-              columns.forEach(key => {
-                const val = row[key];
-                // 業務内容の場合は改行を保持
-                if (key === '業務内容') {
-                  html += `<td>${val !== undefined ? val.replace(/\n/g, '<br>') : ''}</td>`;
-                } else {
-                  html += `<td>${val !== undefined ? val : ''}</td>`;
-                }
-              });
-              html += '</tr>';
-            });
-            html += '</tbody></table>';
-            // まず要約テーブルを取得して上に表示
-            google.script.run.withSuccessHandler(function(summary) {
-              let summaryHtml = '';
-              if (summary) {
-                summaryHtml = `
-                  <table class=\"summary-table\">\n                    <tr>\n                      <th colspan=\"1\">要　約</th>\n                    </tr>\n                    <tr>\n                      <td class=\"summary-table-content\">\n                        <div class=\"task-info-title\">■完了タスク</div>\n                        <ul class=\"task-list\">${(summary['完了タスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>\n                        <div class=\"task-info-title\">■未完了及び進行中のタスク</div>\n                        <ul class=\"task-list\">${(summary['未完了及び進行中のタスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>\n                      </td>\n                    </tr>\n                  </table>\n                `;
-              }
-              // 備考テーブルを稼働内容一覧の下に追加
-              let remarksHtml = '';
-              if (summary && summary['備考'] && summary['備考'].trim() !== '') {
-                remarksHtml = `
-                  <table class="remarks-table">
-                    <tr><th>備考</th></tr>
-                    <tr><td class="remarks-table-content">${summary['備考'].replace(/\n/g, '<br>')}</td></tr>
-                  </table>
-                `;
-              }
-              tableDiv.innerHTML = summaryHtml + html + remarksHtml;
-            }).getMonthlySummaryByMonth(month);
+          tableDiv.innerHTML = '<p class="loading-message">読み込み中...</p>';
+          if (!month) {
+            tableDiv.innerHTML = '<p class="loading-message">該当月の稼働内容はありません。</p>';
+            return;
+          }
+
+          let details = null;
+          let summary = null;
+
+          // 並列で取得
+          google.script.run.withSuccessHandler(function(result) {
+            details = result;
+            renderIfReady();
           }).getWorkDetailsByMonth(month);
+
+          google.script.run.withSuccessHandler(function(result) {
+            summary = result;
+            renderIfReady();
+          }).getMonthlySummaryByMonth(month);
+
+          function renderIfReady() {
+            if (details === null || summary === null) return;
+
+            // 要約テーブル
+            let summaryHtml = '';
+            if (summary) {
+              summaryHtml = `
+                <table class="summary-table">
+                  <tr>
+                    <th colspan="1">要　約</th>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="task-info-title">■完了タスク</div>
+                      <ul class="task-list">${(summary['完了タスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>
+                      <div class="task-info-title">■未完了及び進行中のタスク</div>
+                      <ul class="task-list">${(summary['未完了及び進行中のタスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>
+                    </td>
+                  </tr>
+                </table>
+              `;
+            }
+
+            // 稼働内容一覧テーブル
+            let html = '';
+            if (!details || details.length === 0) {
+              html = '<p class="loading-message">該当月の稼働内容はありません。</p>';
+            } else {
+              html = '<table><thead><tr>';
+              const columns = ['日付', '稼働時間（h）', '業務内容'];
+              columns.forEach(key => {
+                html += `<th>${key}</th>`;
+              });
+              html += '</tr></thead><tbody>';
+              details.forEach(row => {
+                html += '<tr>';
+                columns.forEach(key => {
+                  const val = row[key];
+                  if (key === '業務内容') {
+                    html += `<td>${val !== undefined ? val.replace(/\n/g, '<br>') : ''}</td>`;
+                  } else {
+                    html += `<td>${val !== undefined ? val : ''}</td>`;
+                  }
+                });
+                html += '</tr>';
+              });
+              html += '</tbody></table>';
+            }
+
+            // 備考テーブル
+            let remarksHtml = '';
+            if (summary && summary['備考'] && summary['備考'].trim() !== '') {
+              remarksHtml = `
+                <table class="remarks-table">
+                  <tr><th>備考</th></tr>
+                  <tr><td class="remarks-table-content">${summary['備考'].replace(/\n/g, '<br>')}</td></tr>
+                </table>
+              `;
+            }
+
+            tableDiv.innerHTML = summaryHtml + html + remarksHtml;
+          }
         });
       };
     </script>
