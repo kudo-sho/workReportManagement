@@ -63,6 +63,49 @@
         white-space: pre-wrap;
         word-wrap: break-word;
       }
+      /* タスク情報のスタイル */
+      .task-info {
+        margin-top: 20px;
+        font-size: 15px;
+      }
+      .task-info-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+        font-size: 16px;
+        letter-spacing: 2px;
+      }
+      .task-list {
+        margin: 0 0 10px 20px;
+        padding: 0;
+        list-style: none;
+      }
+      .task-list li {
+        margin: 0 0 2px 0;
+        padding: 0;
+        text-indent: -1em;
+        padding-left: 1em;
+      }
+      .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 15px;
+      }
+      .summary-table th, .summary-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .summary-table th {
+        text-align: center;
+        font-weight: bold;
+        background: #f5f5f5;
+        letter-spacing: 2px;
+      }
+      .summary-table-content {
+        padding: 0;
+      }
     </style>
   </head>
   <body>
@@ -87,8 +130,8 @@
         <select id="targetMonth" required>
           <option value="">選択してください</option>
         </select>
+        <div id="workDetailsTable"></div>
       </div>
-      <div id="workDetailsTable"></div>
       <div class="form-group">
         <label for="approvalStatus">承認可否 <span style="color: red;">（必須）</span>:</label>
         <select id="approvalStatus" required>
@@ -232,7 +275,7 @@
             console.log('取得した稼働内容:', details); // デバッグ用
             if (!details || details.length === 0) {
               tableDiv.innerHTML = '<p>該当月の稼働内容はありません。</p>';
-              return;
+              // 要約テーブルのみ表示するため、下の要約取得処理はこのまま
             }
             // テーブル生成
             let html = '<table><thead><tr>';
@@ -255,7 +298,15 @@
               html += '</tr>';
             });
             html += '</tbody></table>';
-            tableDiv.innerHTML = html;
+            // まず要約テーブルを取得して上に表示
+            google.script.run.withSuccessHandler(function(summary) {
+              let summaryHtml = '';
+              if (summary) {
+                summaryHtml = `
+                  <table class=\"summary-table\">\n                    <tr>\n                      <th colspan=\"1\">要　約</th>\n                    </tr>\n                    <tr>\n                      <td class=\"summary-table-content\">\n                        <div class=\"task-info-title\">■完了タスク</div>\n                        <ul class=\"task-list\">${(summary['完了タスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>\n                        <div class=\"task-info-title\">■未完了及び進行中のタスク</div>\n                        <ul class=\"task-list\">${(summary['未完了及び進行中のタスク']||'').split(/\r?\n/).filter(line => line.trim() !== '').map(line => `<li>${line}</li>`).join('')}</ul>\n                      </td>\n                    </tr>\n                  </table>\n                `;
+              }
+              tableDiv.innerHTML = summaryHtml + html;
+            }).getMonthlySummaryByMonth(month);
           }).getWorkDetailsByMonth(month);
         });
       };

@@ -223,3 +223,35 @@ function getWorkDetailsByMonth(month) {
   Logger.log('返却データ:', JSON.stringify(result, null, 2));
   return result;
 }
+
+// 指定月の月次稼働集計情報を取得
+function getMonthlySummaryByMonth(month) {
+  if (!month) return null;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('月次稼働集計表');
+  if (!sheet) return null;
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  // 検索月を正規化（YYYY-MM形式に統一）
+  const normalizedMonth = month.replace('/', '-');
+  
+  // 該当月の行を検索
+  const targetRow = data.slice(1).find(row => {
+    let month = row[0];
+    let ym = '';
+    if (month instanceof Date) {
+      ym = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy-MM');
+    } else if (typeof month === 'string') {
+      ym = month.replace('/', '-');
+    }
+    return ym === normalizedMonth;
+  });
+  
+  if (!targetRow) return null;
+  
+  return {
+    '完了タスク': targetRow[2] || '',
+    '未完了及び進行中のタスク': targetRow[3] || ''
+  };
+}
