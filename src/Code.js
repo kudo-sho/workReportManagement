@@ -252,6 +252,7 @@ function getMonthlySummaryByMonth(month) {
   
   return {
     '完了タスク': targetRow[2] || '',
-    '未完了及び進行中のタスク': targetRow[3] || ''
+    '未完了及び進行中のタスク': targetRow[3] || '',
+    '備考': targetRow[4] || ''
   };
 }
