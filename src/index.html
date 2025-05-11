@@ -58,6 +58,11 @@
       th {
         background-color: #f5f5f5;
       }
+      /* 業務内容列のスタイル追加 */
+      td:nth-child(3) {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
     </style>
   </head>
   <body>
@@ -231,14 +236,21 @@
             }
             // テーブル生成
             let html = '<table><thead><tr>';
-            Object.keys(details[0]).forEach(key => {
+            const columns = ['日付', '稼働時間（h）', '業務内容'];
+            columns.forEach(key => {
               html += `<th>${key}</th>`;
             });
             html += '</tr></thead><tbody>';
             details.forEach(row => {
               html += '<tr>';
-              Object.values(row).forEach(val => {
-                html += `<td>${val !== undefined ? val : ''}</td>`;
+              columns.forEach(key => {
+                const val = row[key];
+                // 業務内容の場合は改行を保持
+                if (key === '業務内容') {
+                  html += `<td>${val !== undefined ? val.replace(/\n/g, '<br>') : ''}</td>`;
+                } else {
+                  html += `<td>${val !== undefined ? val : ''}</td>`;
+                }
               });
               html += '</tr>';
             });
