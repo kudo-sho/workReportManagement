@@ -81,6 +81,14 @@ function submitWorkApproval(formData) {
       }
     }
 
+    // フォーム内容をメールで送信
+    const mailBody = `【稼働承認フォーム送信内容】\n\nメールアドレス: ${formData.email}\n氏名: ${formData.name}\n対象月: ${formData.targetMonth}\n承認可否: ${formData.approvalStatus}\nコメント: ${formData.comment || '(なし)'}\n送信日時: ${Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')}`;
+    MailApp.sendEmail({
+      to: formData.email,
+      subject: '稼働承認フォーム送信内容のご案内',
+      body: mailBody
+    });
+
     return { success: true };
   } catch (error) {
     console.error('Error submitting work approval:', error);
