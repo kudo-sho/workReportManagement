@@ -228,6 +228,7 @@
             if (response.success) {
               alert('稼働承認が送信されました');
               initializeForm();
+              loadApprovals();
             } else {
               alert('エラーが発生しました: ' + response.error);
             }
@@ -280,8 +281,8 @@
 
       // ページ読み込み時に承認一覧を取得し、フォームを初期化
       window.onload = function() {
-        loadApprovals();
         initializeForm();
+        loadApprovals();
 
         // 対象月選択時に稼働内容・要約・備考を並列取得し、両方揃ったら描画
         document.getElementById('targetMonth').addEventListener('change', function() {
