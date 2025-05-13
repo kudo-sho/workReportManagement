@@ -45,6 +45,17 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+// メール送信関数
+function sendWorkApprovalEmail(formData) {
+  const mailBody = `【稼働承認フォーム送信内容】\n\nメールアドレス: ${formData.email}\n氏名: ${formData.name}\n対象月: ${formData.targetMonth}\n承認可否: ${formData.approvalStatus}\nコメント: ${formData.comment || '(なし)'}\n送信日時: ${Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')}`;
+  
+  MailApp.sendEmail({
+    to: formData.email,
+    subject: '稼働承認フォーム送信内容のご案内',
+    body: mailBody
+  });
+}
+
 // 稼働承認を送信
 function submitWorkApproval(formData) {
   try {
@@ -81,13 +92,8 @@ function submitWorkApproval(formData) {
       }
     }
 
-    // フォーム内容をメールで送信
-    const mailBody = `【稼働承認フォーム送信内容】\n\nメールアドレス: ${formData.email}\n氏名: ${formData.name}\n対象月: ${formData.targetMonth}\n承認可否: ${formData.approvalStatus}\nコメント: ${formData.comment || '(なし)'}\n送信日時: ${Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')}`;
-    MailApp.sendEmail({
-      to: formData.email,
-      subject: '稼働承認フォーム送信内容のご案内',
-      body: mailBody
-    });
+    // メール送信
+    sendWorkApprovalEmail(formData);
 
     return { success: true };
   } catch (error) {
