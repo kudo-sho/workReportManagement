@@ -227,8 +227,7 @@
           .withSuccessHandler(function(response) {
             if (response.success) {
               alert('稼働承認が送信されました');
-              document.getElementById('form').reset();
-              loadApprovals(); // 一覧を更新
+              initializeForm();
             } else {
               alert('エラーが発生しました: ' + response.error);
             }
