@@ -5,14 +5,15 @@
  * 
  * @author 作成日: 2024-05
  * @param {string} targetMonth 対象月 (例: '2024-05')
+ * @param {boolean} exportWord Google DocをWordに変換するか（デフォルト: false）
  */
 
 // ファイルIDを直接指定（ここにテンプレートのファイルIDを設定してください）
 // Google Driveでテンプレートファイルを開き、URLの以下の部分からIDを取得：
 // https://docs.google.com/document/d/【ここがファイルID】/edit
-const TEMPLATE_FILE_ID = '1VxAp2yeCrI06lhvywg06tGUonlPsCkzWSs0J8Nw6g6I'; // ここに実際のIDを入力してください
+const TEMPLATE_FILE_ID = '1Xrr-Eg9JlGJZrwWODDEzD6O_UIOhDY9QHQnRl6LK2qI'; // ここに実際のIDを入力してください
 
-function makeMonthlyReport(targetMonth = '') {
+function makeMonthlyReport(targetMonth = '', exportWord = false) {
   try {
     // 対象月が指定されない場合は前月を取得
     if (!targetMonth) {
@@ -63,20 +64,7 @@ function makeMonthlyReport(targetMonth = '') {
     } catch (e) {
       console.error('テンプレートファイル取得エラー: ' + e.message);
     }
-    
-    // テンプレートが見つからない場合は新規作成
-    if (!templateFile) {
-      try {
-        console.log('テンプレートファイルが見つからないため、新規作成します');
-        templateFile = createDefaultTemplate();
-        
-        if (!templateFile) {
-          throw new Error('テンプレートの作成に失敗しました');
-        }
-      } catch (e) {
-        throw new Error('テンプレートファイルが見つからず、作成もできませんでした: ' + e.message);
-      }
-    }
+  
     
     // テンプレートをGoogle Docsとしてコピー
     let newDoc = null;
@@ -117,7 +105,12 @@ function makeMonthlyReport(targetMonth = '') {
       }
     }
     
-    // テキスト置換を実行
+    // テーブルの挿入処理（テキスト置換の前に行う）
+    if (data.details && data.details.length > 0) {
+      insertWorkDetailsTable(body, data.details);
+    }
+    
+    // テキスト置換を実行（テーブル以外の置換）
     for (const key in data) {
       if (typeof data[key] === 'string' || typeof data[key] === 'number') {
         const replacementValue = data[key].toString();
@@ -135,6 +128,19 @@ function makeMonthlyReport(targetMonth = '') {
     
     console.log('Google Docファイルを作成しました。ID: ' + docId);
     console.log('コンテンツの確認: ' + DocumentApp.openById(docId).getBody().getText().substring(0, 100) + '...');
+    
+    // Google Docのみを返す（Word変換が不要な場合）
+    if (!exportWord) {
+      return { 
+        success: true, 
+        message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式）`, 
+        fileUrl: docFile.getUrl(),
+        fileName: docFile.getName()
+      };
+    }
+    
+    // 以下はWord形式への変換処理（exportWord=trueの場合のみ実行）
+    console.log('Word形式への変換を開始します...');
     
     // Method 1: Drive APIのAdvancedサービスを使用してエクスポート
     try {
@@ -156,9 +162,11 @@ function makeMonthlyReport(targetMonth = '') {
         // 生成したファイルのURLを返す
         return { 
           success: true, 
-          message: `${displayMonth}の月次作業報告書を生成しました`, 
+          message: `${displayMonth}の月次作業報告書を生成しました（Word形式）`, 
           fileUrl: wordFile.getUrl(),
-          fileName: wordFile.getName()
+          fileName: wordFile.getName(),
+          googleDocUrl: docFile.getUrl(),
+          googleDocName: docFile.getName()
         };
       } else {
         console.log('Drive APIが利用できません。Method 2に進みます...');
@@ -202,9 +210,11 @@ function makeMonthlyReport(targetMonth = '') {
         // 生成したファイルのURLを返す
         return { 
           success: true, 
-          message: `${displayMonth}の月次作業報告書を生成しました`, 
+          message: `${displayMonth}の月次作業報告書を生成しました（Word形式）`, 
           fileUrl: wordFile.getUrl(),
-          fileName: wordFile.getName()
+          fileName: wordFile.getName(),
+          googleDocUrl: docFile.getUrl(),
+          googleDocName: docFile.getName()
         };
       } catch (e2) {
         console.error('Word変換エラー (Method 2): ' + e2.message);
@@ -215,9 +225,11 @@ function makeMonthlyReport(targetMonth = '') {
         
         return {
           success: true,
-          message: `${displayMonth}の月次作業報告書を生成しました（Word形式での直接ダウンロードリンク）`, 
-          fileUrl: exportUrl,
-          fileName: `${outputFileName}.docx`
+          message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式と直接ダウンロードリンク）`, 
+          fileUrl: docFile.getUrl(),
+          fileName: docFile.getName(),
+          wordExportUrl: exportUrl,
+          wordFileName: `${outputFileName}.docx`
         };
       }
     }
@@ -229,71 +241,211 @@ function makeMonthlyReport(targetMonth = '') {
 }
 
 /**
- * デフォルトのテンプレートを作成する
- * @return {DriveApp.File} 作成したテンプレートファイル
+ * 指定月の稼働一覧表データをスプレッドシートから取得
+ * @param {string} targetMonth 対象月 (例: '2024-05')
+ * @return {Array} 稼働一覧表データの配列
  */
-function createDefaultTemplate() {
+function getWorkDetailsByMonthForMakeReport(targetMonth) {
   try {
-    // デフォルトのテンプレートを作成
-    const templateName = '月次作業報告書(テンプレート)';
-    const doc = DocumentApp.create(templateName);
-    const body = doc.getBody();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const detailSheet = ss.getSheetByName('稼働一覧表');
     
-    // ヘッダー追加
-    const header = doc.addHeader();
-    header.appendParagraph('月次作業報告書').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    if (!detailSheet) {
+      console.log('稼働一覧表シートが見つかりません');
+      return [];
+    }
     
-    // タイトル
-    body.appendParagraph('{{month}} 作業報告書').setHeading(DocumentApp.ParagraphHeading.HEADING1)
-        .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    const lastRow = detailSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('稼働一覧表シートにデータがありません');
+      return [];
+    }
     
-    // プロジェクト情報テーブル
-    const projectTable = body.appendTable([
-      ['プロジェクト名', '{{projectName}}'],
-      ['クライアント名', '{{clientName}}'],
-      ['担当者名', '{{employeeName}}'],
-      ['管理者名', '{{managerName}}']
-    ]);
-    projectTable.setAttributes({
-      'borderWidth': 1,
-      'width': 500
+    // データ範囲: 日付, 稼働時間(h), 業務内容, ステータス
+    const data = detailSheet.getRange(2, 1, lastRow - 1, 4).getValues();
+    
+    // 指定月のデータをフィルタリング
+    const details = [];
+    data.forEach(function(row) {
+      let workDate = row[0];
+      let workTime = row[1] || 0;
+      let workContent = row[2] || '';
+      let status = row[3] || '';
+      
+      // 日付データをフォーマット
+      let dateStr = '';
+      if (workDate instanceof Date) {
+        dateStr = Utilities.formatDate(workDate, 'Asia/Tokyo', 'yyyy-MM-dd');
+        
+        // 対象月のデータのみ抽出
+        if (dateStr.startsWith(targetMonth)) {
+          const formattedDate = Utilities.formatDate(workDate, 'Asia/Tokyo', 'MM/dd');
+          details.push({
+            workDate: formattedDate,
+            workTime: workTime,
+            workContent: workContent,
+            status: status
+          });
+        }
+      }
     });
     
-    // 稼働情報テーブル
-    body.appendParagraph('稼働情報').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    const workTable = body.appendTable([
-      ['稼働日数', '{{totalWorkDays}}日'],
-      ['実稼働日数', '{{actualWorkDays}}日'],
-      ['稼働時間', '{{workingHours}}時間']
-    ]);
-    workTable.setAttributes({
-      'borderWidth': 1,
-      'width': 500
-    });
+    console.log(`${targetMonth}の稼働一覧表データを${details.length}件取得しました`);
+    return details;
     
-    // 業務概要
-    body.appendParagraph('業務概要').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    body.appendParagraph('{{workSummary}}');
-    
-    // 詳細
-    body.appendParagraph('作業詳細').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    body.appendParagraph('{{workDetails}}');
-    
-    // フッター追加
-    const footer = doc.addFooter();
-    footer.appendParagraph('作成日: ' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'));
-    
-    doc.saveAndClose();
-    
-    console.log('デフォルトテンプレートを作成しました。ID: ' + doc.getId());
-    // テンプレートファイルIDをログに出力（次回ファイルIDを設定するため）
-    console.log('次回以降は以下のファイルIDを定数に設定してください: ' + doc.getId());
-    
-    return DriveApp.getFileById(doc.getId());
-  } catch (e) {
-    console.error('デフォルトテンプレート作成エラー: ' + e.message);
-    return null;
+  } catch (error) {
+    console.error('稼働一覧表データ取得エラー:', error);
+    return [];
   }
+}
+
+/**
+ * Googleドキュメントに稼働詳細テーブルを作成する
+ * @param {DocumentApp.Body} body ドキュメントのボディ
+ * @param {Array} details 稼働詳細データの配列
+ */
+function insertWorkDetailsTable(body, details) {
+  try {
+    // テーブルのプレースホルダーを探す
+    const text = body.getText();
+    
+    // まず既存のテーブルプレースホルダーを探して置換
+    if (text.indexOf('{{work_details_table}}') !== -1) {
+      console.log('稼働詳細テーブルプレースホルダーを見つけました');
+      
+      // プレースホルダーのある段落を見つける
+      const paragraphs = body.getParagraphs();
+      let targetParagraph = null;
+      let targetIndex = -1;
+      
+      for (let i = 0; i < paragraphs.length; i++) {
+        if (paragraphs[i].getText().indexOf('{{work_details_table}}') !== -1) {
+          targetParagraph = paragraphs[i];
+          targetIndex = i;
+          break;
+        }
+      }
+      
+      if (targetParagraph) {
+        // テーブルデータを作成
+        const tableData = createWorkDetailsTable(details);
+        
+        if (tableData.length > 1) { // ヘッダーだけでなく少なくとも1行のデータがある
+          // プレースホルダーテキストを空白に置き換え（完全に空にはしない）
+          targetParagraph.setText(" ");
+          
+          try {
+            // テーブルを挿入
+            const table = body.insertTable(targetIndex, tableData);
+            console.log('稼働詳細テーブルを挿入しました。行数: ' + table.getNumRows());
+            
+            // 元の段落を削除（テーブル挿入後）
+            body.removeChild(targetParagraph);
+            console.log('プレースホルダー段落を削除しました');
+          } catch (innerError) {
+            console.error('テーブル挿入中のエラー: ' + innerError.message);
+            
+            // 代替方法: 既存の段落にテキスト形式でデータを挿入
+            let textTable = "稼働詳細:\n";
+            for (let i = 1; i < tableData.length; i++) { // ヘッダー行はスキップ
+              textTable += tableData[i][0] + ": " + tableData[i][2] + " (" + tableData[i][1] + "h)\n";
+            }
+            targetParagraph.setText(textTable);
+          }
+        } else {
+          // データがない場合
+          targetParagraph.setText("稼働詳細データがありません");
+        }
+      }
+    } else {
+      // テーブルリテラル形式のプレースホルダー（{table}...{/table}）を探す
+      console.log('テーブルプレースホルダーを検索します');
+      
+      // 正規表現を使用してプレースホルダーを探すことはできないため、
+      // テーブルマーカーを探して処理します
+      const tableStartMarker = '{{table_start}}';
+      const tableEndMarker = '{{table_end}}';
+      
+      if (text.indexOf(tableStartMarker) !== -1 && text.indexOf(tableEndMarker) !== -1) {
+        console.log('テーブルマーカーを見つけました');
+        
+        // テーブルの位置を特定
+        const paragraphs = body.getParagraphs();
+        let startIndex = -1;
+        let endIndex = -1;
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+          const paragraphText = paragraphs[i].getText();
+          if (paragraphText.indexOf(tableStartMarker) !== -1) {
+            startIndex = i;
+          }
+          if (paragraphText.indexOf(tableEndMarker) !== -1) {
+            endIndex = i;
+            break;
+          }
+        }
+        
+        if (startIndex !== -1 && endIndex !== -1) {
+          // マーカーを削除（完全に空にはしない）
+          paragraphs[startIndex].setText(paragraphs[startIndex].getText().replace(tableStartMarker, " "));
+          paragraphs[endIndex].setText(paragraphs[endIndex].getText().replace(tableEndMarker, " "));
+          
+          // この間に稼働詳細テーブルを挿入
+          const tableData = createWorkDetailsTable(details);
+          
+          if (tableData.length > 1) { // ヘッダーだけでなく少なくとも1行のデータがある
+            try {
+              const table = body.insertTable(startIndex + 1, tableData);
+              console.log('稼働詳細テーブルを挿入しました。行数: ' + table.getNumRows());
+            } catch (innerError) {
+              console.error('テーブル挿入中のエラー: ' + innerError.message);
+              
+              // 代替方法: テキスト形式でデータを挿入
+              let textTable = "稼働詳細:\n";
+              for (let i = 1; i < tableData.length; i++) { // ヘッダー行はスキップ
+                textTable += tableData[i][0] + ": " + tableData[i][2] + " (" + tableData[i][1] + "h)\n";
+              }
+              body.insertParagraph(startIndex + 1, textTable);
+            }
+          } else {
+            // データがない場合
+            body.insertParagraph(startIndex + 1, "稼働詳細データがありません");
+          }
+        }
+      } else {
+        console.log('テーブルマーカーが見つかりません。テーブルを挿入するには、テンプレートに {{work_details_table}} または {{table_start}} と {{table_end}} マーカーを追加してください。');
+      }
+    }
+  } catch (error) {
+    console.error('テーブル挿入エラー: ' + error.message);
+  }
+}
+
+/**
+ * 稼働詳細テーブルを作成する
+ * @param {Array} details 稼働詳細データの配列
+ * @return {Array} テーブルのセルデータの二次元配列
+ */
+function createWorkDetailsTable(details) {
+  // テーブルのセルデータを作成
+  const tableData = [['日付', '稼働時間(hours)', '業務内容']];
+  
+  // 詳細データを行として追加
+  if (details && details.length > 0) {
+    details.forEach(function(detail) {
+      // nullや未定義の値を処理（空文字列に変換）
+      const date = detail.workDate || " ";
+      const time = detail.workTime ? detail.workTime.toString() : "0";
+      const content = detail.workContent || " ";
+      
+      tableData.push([date, time, content]);
+    });
+  } else {
+    // データがない場合でも空の行を1つ追加（完全に空のテーブルは作成できないため）
+    tableData.push([" ", " ", " "]);
+  }
+  
+  return tableData;
 }
 
 /**
@@ -328,18 +480,15 @@ function getMonthlySummaryData(targetMonth) {
       monthStr = month.replace('/', '-');
     }
     
+    // keyは置換ワードと同じにする
     if (monthStr === targetMonth) {
       monthData = {
         targetMonth: Utilities.formatDate(new Date(`${targetMonth}-01`), 'Asia/Tokyo', 'yyyy年M月'),
         totalWorkDays: data[i][1] || 0,
-        actualWorkDays: data[i][2] || 0,
-        workingHours: data[i][3] || 0,
-        workSummary: data[i][4] || '',
+        summary: data[i][2] || 0,
+        incomplete: data[i][3] || 0,
+        remarks: data[i][4] || '',
         status: data[i][5] || '',
-        projectName: data[i][6] || '',
-        clientName: data[i][7] || '',
-        employeeName: data[i][8] || '',
-        managerName: data[i][9] || ''
       };
       break;
     }
@@ -348,193 +497,38 @@ function getMonthlySummaryData(targetMonth) {
   // 詳細データを取得
   if (monthData) {
     // 作業内容詳細を取得
-    const details = getWorkDetailsByMonth(targetMonth);
+    const details = getWorkDetailsByMonthForMakeReport(targetMonth);
+    
+    // 詳細テーブル用のHTML形式データを作成 (HTML挿入用)
+    let detailsTable = '';
+    if (details.length > 0) {
+      detailsTable = '<table border="1" width="100%">\n';
+      detailsTable += '<tr><th>日付</th><th>稼働時間(h)</th><th>業務内容</th><th>ステータス</th></tr>\n';
+      
+      details.forEach(detail => {
+        detailsTable += `<tr>
+          <td>${detail.workDate}</td>
+          <td>${detail.workTime}</td>
+          <td>${detail.workContent}</td>
+          <td>${detail.status}</td>
+        </tr>\n`;
+      });
+      
+      detailsTable += '</table>';
+    } else {
+      detailsTable = '詳細データがありません';
+    }
+    
+    // データに追加
+    monthData.detailsTable = detailsTable;
+    monthData.details = details; // 生のデータも追加
+    
+    // テキスト形式の詳細リストも作成（HTMLが使えない場合のフォールバック）
     monthData.workDetails = details.map((detail, i) => {
-      return `${i+1}. ${detail.workContent || ''}`;
+      return `${i+1}. ${detail.workDate} (${detail.workTime}h): ${detail.workContent} [${detail.status}]`;
     }).join('\n');
   }
   
   return monthData;
 }
 
-/**
- * UI側から呼び出すための関数
- */
-function generateMonthlyReport(month) {
-  return makeMonthlyReport(month);
-}
-
-/**
- * スプレッドシートのカスタムメニューに追加するための関数
- */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('月次報告')
-    .addItem('月次作業報告書を生成', 'showReportGeneratorDialog')
-    .addToUi();
-}
-
-/**
- * 報告書生成ダイアログを表示
- */
-function showReportGeneratorDialog() {
-  const html = HtmlService.createHtmlOutput(`
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-      }
-      .form-group {
-        margin-bottom: 15px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-      select {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      button {
-        background-color: #4285f4;
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .result {
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        display: none;
-      }
-      .success {
-        background-color: #d4edda;
-      }
-      .error {
-        background-color: #f8d7da;
-      }
-    </style>
-    
-    <div class="form-group">
-      <label for="month">対象月を選択</label>
-      <select id="month"></select>
-    </div>
-    
-    <button onclick="generateReport()">報告書を生成</button>
-    
-    <div id="result" class="result"></div>
-    
-    <script>
-      // 初期化
-      google.script.run
-        .withSuccessHandler(loadMonths)
-        .withFailureHandler(showError)
-        .getMonthsForReport();
-      
-      function loadMonths(months) {
-        const select = document.getElementById('month');
-        
-        if (months && months.length) {
-          months.forEach(function(item) {
-            const option = document.createElement('option');
-            option.value = item.value;
-            option.textContent = item.label;
-            select.appendChild(option);
-          });
-        } else {
-          const option = document.createElement('option');
-          option.textContent = '対象月がありません';
-          select.appendChild(option);
-          select.disabled = true;
-          document.querySelector('button').disabled = true;
-        }
-      }
-      
-      function generateReport() {
-        const month = document.getElementById('month').value;
-        const resultDiv = document.getElementById('result');
-        
-        resultDiv.innerHTML = '処理中...';
-        resultDiv.className = 'result';
-        resultDiv.style.display = 'block';
-        
-        google.script.run
-          .withSuccessHandler(function(result) {
-            if (result.success) {
-              resultDiv.className = 'result success';
-              resultDiv.innerHTML = result.message + '<br><br>' + 
-                '<a href="' + result.fileUrl + '" target="_blank">' + 
-                result.fileName + 'を開く</a>';
-            } else {
-              showError(result.message);
-            }
-          })
-          .withFailureHandler(showError)
-          .generateMonthlyReport(month);
-      }
-      
-      function showError(error) {
-        const resultDiv = document.getElementById('result');
-        resultDiv.className = 'result error';
-        resultDiv.innerHTML = 'エラー: ' + error;
-        resultDiv.style.display = 'block';
-      }
-    </script>
-  `)
-  .setWidth(400)
-  .setHeight(300)
-  .setTitle('月次作業報告書ジェネレーター');
-  
-  SpreadsheetApp.getUi().showModalDialog(html, '月次作業報告書ジェネレーター');
-}
-
-/**
- * 報告書生成用の月リストを取得
- */
-function getMonthsForReport() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('月次稼働集計表');
-    
-    if (!sheet) return [];
-    
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return [];
-    
-    const monthData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    const months = [];
-    
-    monthData.forEach(function(row) {
-      let month = row[0];
-      let monthStr = '';
-      let displayMonth = '';
-      
-      if (month instanceof Date) {
-        monthStr = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy-MM');
-        displayMonth = Utilities.formatDate(month, 'Asia/Tokyo', 'yyyy年M月');
-      } else if (typeof month === 'string') {
-        monthStr = month.replace('/', '-');
-        const [y, m] = month.split(/[\/\-]/);
-        displayMonth = `${y}年${parseInt(m)}月`;
-      }
-      
-      if (monthStr) {
-        months.push({
-          value: monthStr,
-          label: displayMonth
-        });
-      }
-    });
-    
-    return months;
-  } catch (error) {
-    console.error('月リスト取得エラー:', error);
-    return [];
-  }
-}
