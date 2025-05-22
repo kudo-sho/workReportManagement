@@ -505,7 +505,7 @@ function insertWorkDetailsTable(body, details) {
  */
 function createWorkDetailsTable(details) {
   // テーブルのセルデータを作成
-  const tableData = [['日付', '稼働時間(hours)', '業務内容']];
+  const tableData = [['日付', '稼働時間', '業務内容']];
   
   // 詳細データを行として追加
   if (details && details.length > 0) {
@@ -562,10 +562,10 @@ function getMonthlySummaryData(targetMonth) {
       monthData = {
         targetMonth: Utilities.formatDate(new Date(`${targetMonth}-01`), 'Asia/Tokyo', 'yyyy年M月'),
         totalWorkDays: data[i][1] || 0,
-        summary: data[i][2] || 0,
-        incomplete: data[i][3] || 0,
-        remarks: data[i][4] || '',
-        status: data[i][5] || '',
+        summary: data[i][2] || ' ',
+        incomplete: data[i][3] || ' ',
+        remarks: data[i][4] || ' ',
+        status: data[i][5] || ' ',
       };
       break;
     }
