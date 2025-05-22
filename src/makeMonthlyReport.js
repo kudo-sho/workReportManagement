@@ -6,6 +6,7 @@
  * @author 作成日: 2024-05
  * @param {string} targetMonth 対象月 (例: '2024-05')
  * @param {boolean} exportWord Google DocをWordに変換するか（デフォルト: false）
+ * @param {string} outputFolderId 出力先フォルダのID（指定しない場合はルートフォルダに出力）
  */
 
 // ファイルIDを直接指定（ここにテンプレートのファイルIDを設定してください）
@@ -13,7 +14,7 @@
 // https://docs.google.com/document/d/【ここがファイルID】/edit
 const TEMPLATE_FILE_ID = '1Xrr-Eg9JlGJZrwWODDEzD6O_UIOhDY9QHQnRl6LK2qI'; // ここに実際のIDを入力してください
 
-function makeMonthlyReport(targetMonth = '', exportWord = false) {
+function makeMonthlyReport(targetMonth = '', exportWord = false, outputFolderId = '1S6aH6ZmwVYgG8WldgxNpZXs-Zt_C_fY0') {
   try {
     // 対象月が指定されない場合は前月を取得
     if (!targetMonth) {
@@ -68,17 +69,56 @@ function makeMonthlyReport(targetMonth = '', exportWord = false) {
     
     // テンプレートをGoogle Docsとしてコピー
     let newDoc = null;
+    let newDocFile = null;
+    
     if (templateFile.getMimeType() === 'application/vnd.google-apps.document') {
       // Google Doc形式のテンプレートならそのままコピー
       console.log('Google Doc形式のテンプレートを使用します');
-      const newDocFile = templateFile.makeCopy(outputFileName);
-      console.log('テンプレートをコピーしました。ID: ' + newDocFile.getId());
+      
+      // 出力先フォルダが指定されている場合は、そのフォルダにコピー
+      if (outputFolderId) {
+        try {
+          const targetFolder = DriveApp.getFolderById(outputFolderId);
+          if (targetFolder) {
+            // フォルダに直接コピー
+            newDocFile = templateFile.makeCopy(outputFileName, targetFolder);
+            console.log('テンプレートを指定フォルダにコピーしました。ID: ' + newDocFile.getId());
+          }
+        } catch (folderError) {
+          console.error('出力先フォルダ取得エラー: ' + folderError.message);
+          // フォルダ取得に失敗した場合は、通常のコピーを実施
+          newDocFile = templateFile.makeCopy(outputFileName);
+          console.log('テンプレートをルートフォルダにコピーしました。ID: ' + newDocFile.getId());
+        }
+      } else {
+        // 出力先フォルダ未指定の場合
+        newDocFile = templateFile.makeCopy(outputFileName);
+        console.log('テンプレートをルートフォルダにコピーしました。ID: ' + newDocFile.getId());
+      }
+      
       newDoc = DocumentApp.openById(newDocFile.getId());
     } else {
       // WordファイルならGoogle Doc形式に変換
       console.log('Word形式のテンプレートを使用します: ' + templateFile.getName() + ', MIME: ' + templateFile.getMimeType());
       newDoc = DocumentApp.create(outputFileName);
+      newDocFile = DriveApp.getFileById(newDoc.getId());
       console.log('空のGoogle Docを作成しました。ID: ' + newDoc.getId());
+      
+      // 出力先フォルダが指定されている場合は、そのフォルダに移動
+      if (outputFolderId) {
+        try {
+          const targetFolder = DriveApp.getFolderById(outputFolderId);
+          if (targetFolder) {
+            // 作成したファイルを指定フォルダに移動
+            targetFolder.addFile(newDocFile);
+            DriveApp.getRootFolder().removeFile(newDocFile); // ルートフォルダから削除
+            console.log('空のGoogle Docを指定フォルダに移動しました');
+          }
+        } catch (folderError) {
+          console.error('出力先フォルダ取得エラー: ' + folderError.message);
+          // 処理を続行
+        }
+      }
       
       // テンプレートの内容を確認
       try {
@@ -154,8 +194,27 @@ function makeMonthlyReport(targetMonth = '', exportWord = false) {
           throw new Error('エクスポートされたファイルが空です');
         }
         
-        const wordFile = DriveApp.createFile(wordBlob);
-        wordFile.setName(`${outputFileName}.docx`);
+        // Wordファイルを作成（出力先フォルダに保存）
+        let wordFile = null;
+        if (outputFolderId) {
+          try {
+            const targetFolder = DriveApp.getFolderById(outputFolderId);
+            wordBlob.setName(`${outputFileName}.docx`);
+            wordFile = targetFolder.createFile(wordBlob);
+            console.log('Wordファイルを指定フォルダに作成しました。名前: ' + wordFile.getName());
+          } catch (folderError) {
+            console.error('出力先フォルダへのWord保存エラー: ' + folderError.message);
+            // フォルダ取得に失敗した場合は、ルートに保存
+            wordBlob.setName(`${outputFileName}.docx`);
+            wordFile = DriveApp.createFile(wordBlob);
+            console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
+          }
+        } else {
+          // 出力先フォルダ未指定の場合はルートに保存
+          wordBlob.setName(`${outputFileName}.docx`);
+          wordFile = DriveApp.createFile(wordBlob);
+          console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
+        }
         
         console.log('Wordファイルを作成しました。名前: ' + wordFile.getName() + ', サイズ: ' + wordFile.getSize() + ' bytes');
         
@@ -202,8 +261,26 @@ function makeMonthlyReport(targetMonth = '', exportWord = false) {
           throw new Error('エクスポートされたファイルが空です');
         }
         
+        // Wordファイルを作成（出力先フォルダに保存）
+        let wordFile = null;
         blob.setName(`${outputFileName}.docx`);
-        const wordFile = DriveApp.createFile(blob);
+        
+        if (outputFolderId) {
+          try {
+            const targetFolder = DriveApp.getFolderById(outputFolderId);
+            wordFile = targetFolder.createFile(blob);
+            console.log('Wordファイルを指定フォルダに作成しました。名前: ' + wordFile.getName());
+          } catch (folderError) {
+            console.error('出力先フォルダへのWord保存エラー: ' + folderError.message);
+            // フォルダ取得に失敗した場合は、ルートに保存
+            wordFile = DriveApp.createFile(blob);
+            console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
+          }
+        } else {
+          // 出力先フォルダ未指定の場合はルートに保存
+          wordFile = DriveApp.createFile(blob);
+          console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
+        }
         
         console.log('Wordファイルを作成しました。名前: ' + wordFile.getName() + ', サイズ: ' + wordFile.getSize() + ' bytes');
         
