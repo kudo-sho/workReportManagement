@@ -102,7 +102,7 @@ function makeMonthlyReport(targetMonth = '', outputFolderId = '1S6aH6ZmwVYgG8Wld
     
     // テキスト置換
     const body = newDoc.getBody();
-    console.log('テキスト置換前のドキュメント内容（最初の100文字）: ' + body.getText().substring(0, 100) + '...');
+    console.log('テキスト置換前のドキュメント内容: ' + body.getText());
     
     // プレースホルダーの存在を確認
     const text = body.getText();
@@ -128,7 +128,7 @@ function makeMonthlyReport(targetMonth = '', outputFolderId = '1S6aH6ZmwVYgG8Wld
       }
     }
     
-    console.log('テキスト置換後のドキュメント内容（最初の100文字）: ' + body.getText().substring(0, 100) + '...');
+    console.log('テキスト置換後のドキュメント内容: ' + body.getText().substring(0, 100) + '...');
     newDoc.saveAndClose();
     
     // Google DocのIDを取得
@@ -136,7 +136,7 @@ function makeMonthlyReport(targetMonth = '', outputFolderId = '1S6aH6ZmwVYgG8Wld
     const docFile = DriveApp.getFileById(docId);
     
     console.log('Google Docファイルを作成しました。ID: ' + docId);
-    console.log('コンテンツの確認: ' + DocumentApp.openById(docId).getBody().getText().substring(0, 100) + '...');
+    console.log('コンテンツの確認: ' + DocumentApp.openById(docId).getBody().getText());
     
     // Google Docのみを返す（Word変換が不要な場合）
     return { 
