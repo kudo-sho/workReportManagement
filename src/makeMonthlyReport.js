@@ -411,34 +411,8 @@ function getMonthlySummaryData(targetMonth) {
     // 作業内容詳細を取得
     const details = getWorkDetailsByMonthForMakeReport(targetMonth);
     
-    // 詳細テーブル用のHTML形式データを作成 (HTML挿入用)
-    let detailsTable = '';
-    if (details.length > 0) {
-      detailsTable = '<table border="1" width="100%">\n';
-      detailsTable += '<tr><th>日付</th><th>稼働時間(h)</th><th>業務内容</th><th>ステータス</th></tr>\n';
-      
-      details.forEach(detail => {
-        detailsTable += `<tr>
-          <td>${detail.workDate}</td>
-          <td>${detail.workTime}</td>
-          <td>${detail.workContent}</td>
-          <td>${detail.status}</td>
-        </tr>\n`;
-      });
-      
-      detailsTable += '</table>';
-    } else {
-      detailsTable = '詳細データがありません';
-    }
-    
     // データに追加
-    monthData.detailsTable = detailsTable;
     monthData.details = details; // 生のデータも追加
-    
-    // テキスト形式の詳細リストも作成（HTMLが使えない場合のフォールバック）
-    monthData.workDetails = details.map((detail, i) => {
-      return `${i+1}. ${detail.workDate} (${detail.workTime}h): ${detail.workContent} [${detail.status}]`;
-    }).join('\n');
   }
   
   return monthData;
