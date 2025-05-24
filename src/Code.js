@@ -1,5 +1,5 @@
 // スプレッドシートの設定
-const SHEET_NAME = '稼働承認';
+const SHEET_NAME = '稼働承認一覧';
 
 // スプレッドシートを取得
 function getSheet() {
