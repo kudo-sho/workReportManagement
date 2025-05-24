@@ -155,6 +155,14 @@ function getWorkApprovals() {
       });
       return approval;
     });
+
+    // タイムスタンプで降順にソート
+    approvals.sort((a, b) => {
+      const dateA = new Date(a['タイムスタンプ']);
+      const dateB = new Date(b['タイムスタンプ']);
+      return dateB - dateA; // 降順
+    });
+
     return { headers, approvals };
   } catch (error) {
     console.error('Error fetching work approvals:', error);
