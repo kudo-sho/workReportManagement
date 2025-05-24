@@ -84,8 +84,17 @@ function submitWorkApproval(formData) {
           } else if (typeof month === 'string' && month.match(/^\d{4}[\/\-]\d{2}$/)) {
             ym = month.replace('/', '-');
           }
+          // 対象月の承認可否を更新
           if (ym === formData.targetMonth) {
-            summarySheet.getRange(i + 2, 6).setValue('承認済'); // 6列目がステータス
+            let statusToSet = '';
+            if (formData.approvalStatus === '承認') {
+              statusToSet = '承認済';
+            } else if (formData.approvalStatus === '否認') {
+              statusToSet = '否認';
+            }
+            if (statusToSet) {
+              summarySheet.getRange(i + 2, 6).setValue(statusToSet); // 6列目がステータス
+            }
             break;
           }
         }
