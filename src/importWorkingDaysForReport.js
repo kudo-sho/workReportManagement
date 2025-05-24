@@ -54,7 +54,12 @@ function importWorkingDaysForReport() {
     const endTimeEvent = event.getEndTime();
     const durationMs = endTimeEvent - startTime;
     const durationHours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
-    const description = event.getDescription() || '';
+    let description = event.getDescription() || '';
+
+    // 説明が改行のみの場合は空文字に置き換える
+    if (description.trim() === '') {
+      description = '';
+    }
 
     // 日付（開始日のみ）
     const dateOnly = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
