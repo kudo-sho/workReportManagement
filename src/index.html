@@ -226,7 +226,7 @@
         google.script.run
           .withSuccessHandler(function(response) {
             if (response.success) {
-              alert('稼働承認が送信されました');
+              alert('稼働承認結果が送信されました');
               initializeForm();
               loadApprovals();
             } else {

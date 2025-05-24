@@ -95,7 +95,14 @@ function submitWorkApproval(formData) {
     // メール送信
     sendWorkApprovalEmail(formData);
 
-    return { success: true };
+    // 承認の場合、月次報告書を作成
+    let reportResult = null;
+    if (formData.approvalStatus === '承認') {
+      // makeMonthlyReport関数は別ファイルにあるが、GASのグローバルスコープなので直接呼び出せる
+      reportResult = makeMonthlyReport(formData.targetMonth);
+    }
+
+    return { success: true, reportResult: reportResult };
   } catch (error) {
     console.error('Error submitting work approval:', error);
     return { success: false, error: error.toString() };
