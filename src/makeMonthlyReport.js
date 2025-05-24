@@ -5,7 +5,6 @@
  * 
  * @author 作成日: 2024-05
  * @param {string} targetMonth 対象月 (例: '2024-05')
- * @param {boolean} exportWord Google DocをWordに変換するか（デフォルト: false）
  * @param {string} outputFolderId 出力先フォルダのID（指定しない場合はルートフォルダに出力）
  */
 
@@ -14,7 +13,7 @@
 // https://docs.google.com/document/d/【ここがファイルID】/edit
 const TEMPLATE_FILE_ID = '1Xrr-Eg9JlGJZrwWODDEzD6O_UIOhDY9QHQnRl6LK2qI'; // ここに実際のIDを入力してください
 
-function makeMonthlyReport(targetMonth = '', exportWord = false, outputFolderId = '1S6aH6ZmwVYgG8WldgxNpZXs-Zt_C_fY0') {
+function makeMonthlyReport(targetMonth = '', outputFolderId = '1S6aH6ZmwVYgG8WldgxNpZXs-Zt_C_fY0') {
   try {
     // 対象月が指定されない場合は前月を取得
     if (!targetMonth) {
@@ -52,14 +51,9 @@ function makeMonthlyReport(targetMonth = '', exportWord = false, outputFolderId 
           templateFile = docTemplateFiles.next();
           console.log('テンプレートファイルを名前で見つけました: ' + templateFile.getName());
         } else {
-          // Word形式で検索
-          const wordTemplateName = '月次作業報告書(テンプレート).docx';
-          const wordTemplateFiles = DriveApp.getFilesByName(wordTemplateName);
-          
-          if (wordTemplateFiles && wordTemplateFiles.hasNext()) {
-            templateFile = wordTemplateFiles.next();
-            console.log('Wordテンプレートファイルを見つけました: ' + templateFile.getName());
-          }
+          // 何も見つからなかった場合のエラー処理を追加
+          console.error('Google Doc形式のテンプレートファイルが見つかりませんでした。');
+          throw new Error('適切なテンプレートファイルが見つかりません。');
         }
       }
     } catch (e) {
@@ -99,36 +93,11 @@ function makeMonthlyReport(targetMonth = '', exportWord = false, outputFolderId 
       newDoc = DocumentApp.openById(newDocFile.getId());
     } else {
       // WordファイルならGoogle Doc形式に変換
-      console.log('Word形式のテンプレートを使用します: ' + templateFile.getName() + ', MIME: ' + templateFile.getMimeType());
-      newDoc = DocumentApp.create(outputFileName);
-      newDocFile = DriveApp.getFileById(newDoc.getId());
-      console.log('空のGoogle Docを作成しました。ID: ' + newDoc.getId());
-      
-      // 出力先フォルダが指定されている場合は、そのフォルダに移動
-      if (outputFolderId) {
-        try {
-          const targetFolder = DriveApp.getFolderById(outputFolderId);
-          if (targetFolder) {
-            // 作成したファイルを指定フォルダに移動
-            targetFolder.addFile(newDocFile);
-            DriveApp.getRootFolder().removeFile(newDocFile); // ルートフォルダから削除
-            console.log('空のGoogle Docを指定フォルダに移動しました');
-          }
-        } catch (folderError) {
-          console.error('出力先フォルダ取得エラー: ' + folderError.message);
-          // 処理を続行
-        }
-      }
-      
-      // テンプレートの内容を確認
-      try {
-        const templateContent = templateFile.getBlob().getDataAsString();
-        console.log('テンプレートの内容（最初の100文字）: ' + templateContent.substring(0, 100) + '...');
-      } catch (te) {
-        console.log('テンプレート内容の取得に失敗: ' + te.message);
-      }
-      // 注意: ここではWordファイルの内容を直接反映できない
-      // ユーザーにはGoogle Doc形式のテンプレートを用意してもらう
+      // この分岐はテンプレートがGoogle Docのみを想定するため、基本的に通らないはずだが、念のため残す
+      // ただし、Wordテンプレートを積極的に探す処理は削除済み
+      console.log('サポート外のテンプレート形式です: ' + templateFile.getName() + ', MIME: ' + templateFile.getMimeType());
+      console.log('Google Doc形式のテンプレートを使用してください。');
+      throw new Error('テンプレートはGoogle Doc形式である必要があります。');
     }
     
     // テキスト置換
@@ -170,146 +139,12 @@ function makeMonthlyReport(targetMonth = '', exportWord = false, outputFolderId 
     console.log('コンテンツの確認: ' + DocumentApp.openById(docId).getBody().getText().substring(0, 100) + '...');
     
     // Google Docのみを返す（Word変換が不要な場合）
-    if (!exportWord) {
-      return { 
-        success: true, 
-        message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式）`, 
-        fileUrl: docFile.getUrl(),
-        fileName: docFile.getName()
-      };
-    }
-    
-    // 以下はWord形式への変換処理（exportWord=trueの場合のみ実行）
-    console.log('Word形式への変換を開始します...');
-    
-    // Method 1: Drive APIのAdvancedサービスを使用してエクスポート
-    try {
-      // Drive v2 APIを使用
-      if (typeof Drive !== 'undefined') {
-        console.log('Method 1: Drive APIを使用してエクスポートを試みます...');
-        const wordBlob = Drive.Files.export(docId, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', {alt: 'media'});
-        console.log('エクスポート成功。BLOBサイズ: ' + (wordBlob ? wordBlob.getBytes().length : 'null'));
-        
-        if (!wordBlob || wordBlob.getBytes().length === 0) {
-          throw new Error('エクスポートされたファイルが空です');
-        }
-        
-        // Wordファイルを作成（出力先フォルダに保存）
-        let wordFile = null;
-        if (outputFolderId) {
-          try {
-            const targetFolder = DriveApp.getFolderById(outputFolderId);
-            wordBlob.setName(`${outputFileName}.docx`);
-            wordFile = targetFolder.createFile(wordBlob);
-            console.log('Wordファイルを指定フォルダに作成しました。名前: ' + wordFile.getName());
-          } catch (folderError) {
-            console.error('出力先フォルダへのWord保存エラー: ' + folderError.message);
-            // フォルダ取得に失敗した場合は、ルートに保存
-            wordBlob.setName(`${outputFileName}.docx`);
-            wordFile = DriveApp.createFile(wordBlob);
-            console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
-          }
-        } else {
-          // 出力先フォルダ未指定の場合はルートに保存
-          wordBlob.setName(`${outputFileName}.docx`);
-          wordFile = DriveApp.createFile(wordBlob);
-          console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
-        }
-        
-        console.log('Wordファイルを作成しました。名前: ' + wordFile.getName() + ', サイズ: ' + wordFile.getSize() + ' bytes');
-        
-        // 生成したファイルのURLを返す
-        return { 
-          success: true, 
-          message: `${displayMonth}の月次作業報告書を生成しました（Word形式）`, 
-          fileUrl: wordFile.getUrl(),
-          fileName: wordFile.getName(),
-          googleDocUrl: docFile.getUrl(),
-          googleDocName: docFile.getName()
-        };
-      } else {
-        console.log('Drive APIが利用できません。Method 2に進みます...');
-        throw new Error('Drive APIが利用できません');
-      }
-    } catch (e) {
-      console.error('Word変換エラー (Method 1): ' + e.message);
-      
-      // Method 2: URLを使用してエクスポート
-      try {
-        console.log('Method 2: URL Fetchを使用してエクスポートを試みます...');
-        const token = ScriptApp.getOAuthToken();
-        const url = `https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`;
-        
-        const response = UrlFetchApp.fetch(url, {
-          headers: {
-            'Authorization': 'Bearer ' + token
-          },
-          muteHttpExceptions: true // エラーを詳細に捕捉するため
-        });
-        
-        const responseCode = response.getResponseCode();
-        console.log('URL Fetchレスポンスコード: ' + responseCode);
-        
-        if (responseCode !== 200) {
-          throw new Error('エクスポート失敗: レスポンスコード ' + responseCode);
-        }
-        
-        const blob = response.getBlob();
-        console.log('取得したBLOBサイズ: ' + (blob ? blob.getBytes().length : 'null'));
-        
-        if (!blob || blob.getBytes().length === 0) {
-          throw new Error('エクスポートされたファイルが空です');
-        }
-        
-        // Wordファイルを作成（出力先フォルダに保存）
-        let wordFile = null;
-        blob.setName(`${outputFileName}.docx`);
-        
-        if (outputFolderId) {
-          try {
-            const targetFolder = DriveApp.getFolderById(outputFolderId);
-            wordFile = targetFolder.createFile(blob);
-            console.log('Wordファイルを指定フォルダに作成しました。名前: ' + wordFile.getName());
-          } catch (folderError) {
-            console.error('出力先フォルダへのWord保存エラー: ' + folderError.message);
-            // フォルダ取得に失敗した場合は、ルートに保存
-            wordFile = DriveApp.createFile(blob);
-            console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
-          }
-        } else {
-          // 出力先フォルダ未指定の場合はルートに保存
-          wordFile = DriveApp.createFile(blob);
-          console.log('Wordファイルをルートフォルダに作成しました。名前: ' + wordFile.getName());
-        }
-        
-        console.log('Wordファイルを作成しました。名前: ' + wordFile.getName() + ', サイズ: ' + wordFile.getSize() + ' bytes');
-        
-        // 生成したファイルのURLを返す
-        return { 
-          success: true, 
-          message: `${displayMonth}の月次作業報告書を生成しました（Word形式）`, 
-          fileUrl: wordFile.getUrl(),
-          fileName: wordFile.getName(),
-          googleDocUrl: docFile.getUrl(),
-          googleDocName: docFile.getName()
-        };
-      } catch (e2) {
-        console.error('Word変換エラー (Method 2): ' + e2.message);
-        
-        // Method 3: ダウンロードリンクを提供
-        console.log('Method 3: ダウンロードリンクを提供します...');
-        const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=docx`;
-        
-        return {
-          success: true,
-          message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式と直接ダウンロードリンク）`, 
-          fileUrl: docFile.getUrl(),
-          fileName: docFile.getName(),
-          wordExportUrl: exportUrl,
-          wordFileName: `${outputFileName}.docx`
-        };
-      }
-    }
+    return { 
+      success: true, 
+      message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式）`, 
+      fileUrl: docFile.getUrl(),
+      fileName: docFile.getName()
+    };
     
   } catch (error) {
     console.error(`月次作業報告書生成エラー: ${error.message}`);
