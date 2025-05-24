@@ -226,14 +226,12 @@ function insertWorkDetailsTable(body, details) {
       console.log('稼働詳細テーブルプレースホルダーを見つけました');
       
       // プレースホルダーのある段落を見つける
-      const paragraphs = body.getParagraphs();
+      const paragraphs = body.getParagraphs(); // この時点での段落リスト
       let targetParagraph = null;
-      let targetIndex = -1;
       
       for (let i = 0; i < paragraphs.length; i++) {
         if (paragraphs[i].getText().indexOf('{{work_details_table}}') !== -1) {
           targetParagraph = paragraphs[i];
-          targetIndex = i;
           break;
         }
       }
@@ -243,26 +241,47 @@ function insertWorkDetailsTable(body, details) {
         const tableData = createWorkDetailsTable(details);
         
         if (tableData.length > 1) { // ヘッダーだけでなく少なくとも1行のデータがある
-          // プレースホルダーテキストを空白に置き換え（完全に空にはしない）
-          targetParagraph.setText(" ");
+          let actualParagraphIndexInBody;
+          try {
+            // プレースホルダーのある段落の、ボディにおける実際のインデックスを取得
+            actualParagraphIndexInBody = body.getChildIndex(targetParagraph);
+          } catch (e) {
+            console.error('プレースホルダー段落のインデックス取得に失敗しました: ' + e.message);
+            console.error('targetParagraph のテキスト: ' + (targetParagraph ? targetParagraph.getText() : 'null'));
+            // エラーが発生した場合、これ以上進めないため処理を中断する
+            throw new Error('テーブル挿入のためのプレースホルダー段落が無効か、見つかりませんでした。');
+          }
           
           try {
-            // テーブルを挿入
-            const table = body.insertTable(targetIndex, tableData);
+            // テーブルを、プレースホルダー段落の「前」に挿入
+            const table = body.insertTable(actualParagraphIndexInBody, tableData);
             console.log('稼働詳細テーブルを挿入しました。行数: ' + table.getNumRows());
             
-            // 元の段落を削除（テーブル挿入後）
+            // 元のプレースホルダー段落を削除
+            // targetParagraph オブジェクトがまだ有効なら、それを使って削除するのが最も安全。
             body.removeChild(targetParagraph);
             console.log('プレースホルダー段落を削除しました');
           } catch (innerError) {
             console.error('テーブル挿入中のエラー: ' + innerError.message);
             
             // 代替方法: 既存の段落にテキスト形式でデータを挿入
+            // この場合、元のプレースホルダ段落に書き込むのではなく、
+            // 挿入しようとした位置に新しい段落としてテキストを挿入する。
             let textTable = "稼働詳細:\n";
             for (let i = 1; i < tableData.length; i++) { // ヘッダー行はスキップ
               textTable += tableData[i][0] + ": " + tableData[i][2] + " (" + tableData[i][1] + "h)\n";
             }
-            targetParagraph.setText(textTable);
+            body.insertParagraph(actualParagraphIndexInBody, textTable);
+            // 元のプレースホルダ段落がまだ残っている可能性があるので、削除を試みる
+            try {
+                // targetParagraph が有効で、かつドキュメントにまだ存在する場合のみ削除
+                if (targetParagraph && targetParagraph.getParent()) {
+                    body.removeChild(targetParagraph);
+                    console.log('代替処理後、元のプレースホルダー段落を削除しました');
+                }
+            } catch (e) {
+                console.warn("代替処理後、元のプレースホルダー段落の削除に失敗: " + e.message);
+            }
           }
         } else {
           // データがない場合
