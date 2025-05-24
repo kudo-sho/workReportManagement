@@ -143,7 +143,8 @@ function makeMonthlyReport(targetMonth = '', outputFolderId = '1S6aH6ZmwVYgG8Wld
       success: true, 
       message: `${displayMonth}の月次作業報告書を生成しました（Google Doc形式）`, 
       fileUrl: docFile.getUrl(),
-      fileName: docFile.getName()
+      fileName: docFile.getName(),
+      fileId: docId
     };
     
   } catch (error) {

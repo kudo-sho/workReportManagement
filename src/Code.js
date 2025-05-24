@@ -46,14 +46,28 @@ function include(filename) {
 }
 
 // メール送信関数
-function sendWorkApprovalEmail(formData) {
+function sendWorkApprovalEmail(formData, reportResult = null) {
   const mailBody = `【稼働承認フォーム送信内容】\n\nメールアドレス: ${formData.email}\n氏名: ${formData.name}\n対象月: ${formData.targetMonth}\n承認可否: ${formData.approvalStatus}\nコメント: ${formData.comment || '(なし)'}\n送信日時: ${Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')}`;
   
-  MailApp.sendEmail({
+  const mailOptions = {
     to: formData.email,
     subject: '稼働承認フォーム送信内容のご案内',
     body: mailBody
-  });
+  };
+
+  // 月次報告書が作成されていれば添付
+  if (reportResult && reportResult.success && reportResult.fileId) {
+    try {
+      const file = DriveApp.getFileById(reportResult.fileId);
+      mailOptions.attachments = [file.getBlob()];
+      mailOptions.htmlBody = `${mailBody.replace(/\n/g, '<br>')}<br><br>月次報告書（${reportResult.fileName}）を添付しました。`;
+    } catch (e) {
+      console.error('メール添付ファイルの取得に失敗しました: ', e);
+      // 添付に失敗してもメールは送信する
+    }
+  }
+  
+  MailApp.sendEmail(mailOptions);
 }
 
 // 稼働承認を送信
@@ -102,14 +116,13 @@ function submitWorkApproval(formData) {
     }
 
     // メール送信
-    sendWorkApprovalEmail(formData);
-
-    // 承認の場合、月次報告書を作成
     let reportResult = null;
     if (formData.approvalStatus === '承認') {
       // makeMonthlyReport関数は別ファイルにあるが、GASのグローバルスコープなので直接呼び出せる
       reportResult = makeMonthlyReport(formData.targetMonth);
     }
+
+    sendWorkApprovalEmail(formData, reportResult);
 
     return { success: true, reportResult: reportResult };
   } catch (error) {
