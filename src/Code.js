@@ -186,8 +186,8 @@ function getUnapprovedMonths() {
         } else if (typeof month === 'string') {
           ym = month.replace('/', '-');
         }
-        // ステータスが承認済でなく、かつ当月でない
-        return row[5] !== '承認済' && ym !== thisMonth;
+        // ステータスが承認済でなく、かつ当月より前の月のみ
+        return row[5] !== '承認済' && ym < thisMonth;
       })
       .map(row => {
         let month = row[0];
