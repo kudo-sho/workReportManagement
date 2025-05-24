@@ -166,6 +166,8 @@
       <button type="submit">送信</button>
     </form>
 
+    <div id="submissionStatus" style="margin-top: 15px;"></div>
+
     <div class="approvals-list">
       <h2>稼働承認一覧</h2>
       <div id="approvalsTable"></div>
@@ -223,18 +225,45 @@
       }
 
       function submitForm(formData) {
+        const statusDiv = document.getElementById('submissionStatus');
+        statusDiv.innerHTML = '承認情報を送信中...';
+
         google.script.run
           .withSuccessHandler(function(response) {
             if (response.success) {
-              alert('稼働承認結果が送信されました');
-              initializeForm();
-              loadApprovals();
+              statusDiv.innerHTML = '稼働承認リクエストを受け付けました。';
+
+              if (response.needsReportGeneration) {
+                statusDiv.innerHTML += '<br>月次報告書の作成とメール送信処理を開始します...';
+                google.script.run
+                  .withSuccessHandler(function(asyncResponse) {
+                    if (asyncResponse.success) {
+                      statusDiv.innerHTML = asyncResponse.message;
+                    } else {
+                      statusDiv.innerHTML = `エラー: ${asyncResponse.message || asyncResponse.error}`;
+                    }
+                    initializeForm(); // 処理完了後にフォーム初期化
+                    loadApprovals();  // 処理完了後に一覧再読み込み
+                  })
+                  .withFailureHandler(function(error) {
+                    statusDiv.innerHTML = '月次報告書作成・メール送信処理でエラーが発生しました: ' + error;
+                    initializeForm(); // エラー時もフォーム初期化（必要に応じて）
+                    loadApprovals();  // エラー時も一覧再読み込み（必要に応じて）
+                  })
+                  .generateReportAndSendEmailAsync(response.formData);
+              } else {
+                statusDiv.innerHTML = '稼働承認（否認）が処理されました。';
+                initializeForm(); // 否認の場合はここでフォーム初期化
+                loadApprovals();  // 否認の場合はここで一覧再読み込み
+              }
             } else {
-              alert('エラーが発生しました: ' + response.error);
+              statusDiv.innerHTML = 'エラーが発生しました: ' + response.error;
+              // 失敗時はフォーム初期化しない
             }
           })
           .withFailureHandler(function(error) {
-            alert('エラーが発生しました: ' + error);
+            statusDiv.innerHTML = 'エラーが発生しました: ' + error;
+            // 失敗時はフォーム初期化しない
           })
           .submitWorkApproval(formData);
       }

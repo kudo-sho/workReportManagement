@@ -70,10 +70,10 @@ function sendWorkApprovalEmail(formData, reportResult = null) {
   MailApp.sendEmail(mailOptions);
 }
 
-// 稼働承認を送信
+// 稼働承認を送信 (即時処理部分)
 function submitWorkApproval(formData) {
   try {
-    const sheet = getSheet();
+    const sheet = getSheet(); // '稼働承認一覧' シート
     sheet.appendRow([
       new Date(),
       formData.email,
@@ -83,7 +83,7 @@ function submitWorkApproval(formData) {
       formData.comment
     ]);
 
-    // 月次稼働集計表のステータスを「承認済」に更新
+    // 月次稼働集計表のステータスを更新
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const summarySheet = ss.getSheetByName('月次稼働集計表');
     if (summarySheet) {
@@ -98,7 +98,6 @@ function submitWorkApproval(formData) {
           } else if (typeof month === 'string' && month.match(/^\d{4}[\/\-]\d{2}$/)) {
             ym = month.replace('/', '-');
           }
-          // 対象月の承認可否を更新
           if (ym === formData.targetMonth) {
             let statusToSet = '';
             if (formData.approvalStatus === '承認') {
@@ -114,20 +113,36 @@ function submitWorkApproval(formData) {
         }
       }
     }
-
-    // メール送信
-    let reportResult = null;
-    if (formData.approvalStatus === '承認') {
-      // makeMonthlyReport関数は別ファイルにあるが、GASのグローバルスコープなので直接呼び出せる
-      reportResult = makeMonthlyReport(formData.targetMonth);
-    }
-
-    sendWorkApprovalEmail(formData, reportResult);
-
-    return { success: true, reportResult: reportResult };
+    // メール送信と報告書作成はここでは行わない
+    return { success: true, needsReportGeneration: formData.approvalStatus === '承認', formData: formData };
   } catch (error) {
     console.error('Error submitting work approval:', error);
     return { success: false, error: error.toString() };
+  }
+}
+
+// 月次報告書作成とメール送信 (非同期で呼び出される部分)
+function generateReportAndSendEmailAsync(formData) {
+  let reportResult = null;
+  try {
+    if (formData.approvalStatus === '承認') {
+      reportResult = makeMonthlyReport(formData.targetMonth); // 報告書作成
+    }
+
+    // メール送信 (報告書作成結果を渡す)
+    sendWorkApprovalEmail(formData, reportResult);
+
+    return { success: true, reportResult: reportResult, message: "月次報告書の作成とメール送信が完了しました。" };
+
+  } catch (error) {
+    console.error('Error in generateReportAndSendEmailAsync:', error);
+    // エラー時でも、基本的な承認情報はメールで送る試み (reportResult は null のまま)
+    try {
+      sendWorkApprovalEmail(formData, null); 
+    } catch (emailError) {
+      console.error('Error sending basic email after report generation failure:', emailError);
+    }
+    return { success: false, error: error.toString(), message: "月次報告書の作成またはメール送信中にエラーが発生しました。" };
   }
 }
 
